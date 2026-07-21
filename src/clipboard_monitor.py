@@ -6,9 +6,10 @@ class ClipboardMonitor(threading.Thread):
     def __init__(self, callback):
         super().__init__()
         self.callback = callback
-        self.last_text = ""
         self.running = True
         self.daemon = True
+        # Set to current text to avoid translating old content on startup
+        self.last_text = self.get_clipboard_text() or ""
 
     def get_clipboard_text(self):
         try:
@@ -42,3 +43,19 @@ class ClipboardMonitor(threading.Thread):
 
     def stop(self):
         self.running = False
+
+    def set_clipboard_text(self, text):
+        try:
+            win32clipboard.OpenClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(text, win32clipboard.CF_UNICODETEXT)
+            win32clipboard.CloseClipboard()
+            self.last_text = text  # Actualizamos last_text para evitar el bucle infinito
+            return True
+        except Exception as e:
+            print(f"[Clipboard] Error al escribir: {e}")
+            try:
+                win32clipboard.CloseClipboard()
+            except:
+                pass
+            return False

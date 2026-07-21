@@ -1,3 +1,8 @@
-httpx[http2]
+wxPython
+ctranslate2
+transformers
 pywin32
+pyttsx3
 python-dotenv
+PyInstaller
+huggingface_hub

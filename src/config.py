@@ -7,36 +7,22 @@ load_dotenv()
 
 class Config:
     def __init__(self):
-        # Determinar directorio base de forma robusta
         if getattr(sys, 'frozen', False):
             self.base_dir = os.path.dirname(sys.executable)
+            self.internal_dir = sys._MEIPASS
         else:
-            # En modo script, src/ está dentro del proyecto
             self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            self.internal_dir = self.base_dir
             
         self.CONFIG_FILE = os.path.join(self.base_dir, "config.json")
-        
-        self.AVAILABLE_MODELS = {
-            "OpenAI GPT-OSS 120B": "openai/gpt-oss-120b:free",
-            "NVIDIA Nemotron 3 Ultra 550B": "nvidia/nemotron-3-ultra-550b-a55b:free",
-            "NVIDIA Nemotron 3 Super 120B": "nvidia/nemotron-3-super-120b-a12b:free",
-            "Google Gemma 4 31B": "google/gemma-4-31b-it",
-            "Qwen 3 30B": "qwen/qwen3-30b-a3b-instruct-2507",
-            "Mistral NeMo": "mistralai/mistral-nemo",
-            "Nex AGI N2 Pro": "nex-agi/nex-n2-pro:free",
-            "Llama 4 Scout": "meta-llama/llama-4-scout",
-            "Llama 3.1 8B": "meta-llama/llama-3.1-8b-instruct",
-            "Auto-Router Gratis": "openrouter/free"
-        }
+        self.MODEL_DIR = os.path.join(self.internal_dir, "models", "nllb-ct2")
         
         # Valores por defecto iniciales
-        self.API_KEY = ""
-        self.MODEL = "openai/gpt-oss-120b:free"
-        self.SOURCE_LANG = "auto"
-        self.TARGET_LANG = "Spanish"
-        self.CONTEXT_MODE = False
-        self.TRANSLATION_MODE = "AI" # Opciones: "AI", "Fast"
-        self.FAST_ENGINE = "google" # Opciones: "google", "bing", "alibaba", etc.
+        self.SOURCE_LANG = "Inglés"
+        self.TARGET_LANG = "Español"
+        self.COPY_TO_CLIPBOARD = True
+        self.BEAM_SIZE = 4
+        self.SPLIT_SENTENCES = False
         
         self.load()
 
@@ -45,34 +31,28 @@ class Config:
             try:
                 with open(self.CONFIG_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    self.API_KEY = data.get("api_key", self.API_KEY)
-                    self.MODEL = data.get("model", self.MODEL)
                     self.SOURCE_LANG = data.get("source_lang", self.SOURCE_LANG)
                     self.TARGET_LANG = data.get("target_lang", self.TARGET_LANG)
-                    self.CONTEXT_MODE = data.get("context_mode", self.CONTEXT_MODE)
-                    self.TRANSLATION_MODE = data.get("translation_mode", self.TRANSLATION_MODE)
-                    self.FAST_ENGINE = data.get("fast_engine", self.FAST_ENGINE)
+                    self.COPY_TO_CLIPBOARD = data.get("copy_to_clipboard", self.COPY_TO_CLIPBOARD)
+                    self.BEAM_SIZE = data.get("beam_size", self.BEAM_SIZE)
+                    self.SPLIT_SENTENCES = data.get("split_sentences", self.SPLIT_SENTENCES)
                 print(f"[Config] Cargada configuración desde {self.CONFIG_FILE}", flush=True)
             except Exception as e:
                 print(f"[Config] Error al cargar: {e}", flush=True)
 
-    def save(self, source_lang=None, target_lang=None, model=None, api_key=None, context_mode=None, translation_mode=None, fast_engine=None):
+    def save(self, source_lang=None, target_lang=None, copy_to_clipboard=None, beam_size=None, split_sentences=None):
         if source_lang: self.SOURCE_LANG = source_lang
         if target_lang: self.TARGET_LANG = target_lang
-        if model: self.MODEL = model
-        if api_key is not None: self.API_KEY = api_key
-        if context_mode is not None: self.CONTEXT_MODE = context_mode
-        if translation_mode: self.TRANSLATION_MODE = translation_mode
-        if fast_engine: self.FAST_ENGINE = fast_engine
+        if copy_to_clipboard is not None: self.COPY_TO_CLIPBOARD = copy_to_clipboard
+        if beam_size is not None: self.BEAM_SIZE = beam_size
+        if split_sentences is not None: self.SPLIT_SENTENCES = split_sentences
         
         data = {
-            "api_key": self.API_KEY,
-            "model": self.MODEL,
             "source_lang": self.SOURCE_LANG,
             "target_lang": self.TARGET_LANG,
-            "context_mode": self.CONTEXT_MODE,
-            "translation_mode": self.TRANSLATION_MODE,
-            "fast_engine": self.FAST_ENGINE
+            "copy_to_clipboard": self.COPY_TO_CLIPBOARD,
+            "beam_size": self.BEAM_SIZE,
+            "split_sentences": self.SPLIT_SENTENCES
         }
         
         try:

@@ -1,154 +1,109 @@
-import httpx
-import json
 import os
-import translators as ts
+import threading
 from .config import config
+from .languages import NLLB_LANGUAGES
 
 class Translator:
     def __init__(self):
-        self.url = "https://openrouter.ai/api/v1/chat/completions"
-        self.session = httpx.Client(http2=True)
-        self.history_file = os.path.join(config.base_dir, "context_history.json")
-        self.history = self._load_history()
-        self._last_api_key = None
-        self._update_headers()
-        # Pre-request de calentamiento
-        self._warmup_engines()
+        # Local AI variables
+        self.model = None
+        self.tokenizer = None
+        self._init_local_ai()
 
-    def _load_history(self):
-        try:
-            if os.path.exists(self.history_file):
-                with open(self.history_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-        except Exception:
-            pass
-        return []
-
-    def _save_history(self):
-        try:
-            with open(self.history_file, 'w', encoding='utf-8') as f:
-                json.dump(self.history, f, ensure_ascii=False)
-        except Exception:
-            pass
-
-    def _warmup_engines(self):
-        # Inicializa motores e invoca conexión HTTPS en fondo
-        import threading
-        def _warmup():
+    def _init_local_ai(self):
+        def _load():
             try:
-                ts.translate_text("Hi", from_language="en", to_language="es", engine=config.FAST_ENGINE)
-            except:
-                pass
-            if config.API_KEY:
-                try:
-                    self.session.get("https://openrouter.ai/api/v1/models", timeout=5)
-                    print("[Translator] Warm-up de conexión OpenRouter completado.", flush=True)
-                except:
-                    pass
-        threading.Thread(target=_warmup, daemon=True).start()
+                import ctranslate2
+                import transformers
+                
+                print("[Translator] Cargando tokenizer de Meta NLLB...", flush=True)
+                self.tokenizer = transformers.AutoTokenizer.from_pretrained(config.MODEL_DIR, local_files_only=True)
+                
+                print("[Translator] Cargando modelo NLLB en procesador (CTranslate2)...", flush=True)
+                self.model = ctranslate2.Translator(config.MODEL_DIR, device="cpu", compute_type="int8")
+                self.is_loaded = True
+                print("[Translator] ¡Modelo NLLB cargado exitosamente!", flush=True)
+                
+            except Exception as e:
+                import traceback
+                error_msg = f"Error grave al cargar modelo: {e}\n{traceback.format_exc()}"
+                print(f"[Translator] {error_msg}", flush=True)
+                with open("error_log.txt", "w", encoding="utf-8") as f:
+                    f.write(error_msg)
 
-    def _update_headers(self):
-        if config.API_KEY == self._last_api_key:
-            return
-            
-        self.headers = {
-            "Authorization": f"Bearer {config.API_KEY}",
-            "Content-Type": "application/json",
-            "X-OpenRouter-Title": "Traductor del Portapapeles",
-        }
-        self.session.headers.update(self.headers)
-        self._last_api_key = config.API_KEY
+        threading.Thread(target=_load, daemon=True).start()
 
     def translate(self, text, source_lang=None, target_lang=None):
         if not text or not text.strip():
             return ""
 
-        # Elegir modo de traducción
-        if config.TRANSLATION_MODE == "Fast":
-            return self._translate_fast(text, source_lang, target_lang)
-        else:
-            return self._translate_ai(text, source_lang, target_lang)
-
-    def _translate_fast(self, text, source_lang=None, target_lang=None):
-        try:
-            sl = source_lang or config.SOURCE_LANG
-            tl = target_lang or config.TARGET_LANG
-            
-            # Mapeo de códigos de idioma para motores tradicionales (ej. 'Spanish' -> 'es')
-            lang_map = {"Spanish": "es", "English": "en", "French": "fr", "German": "de", "auto": "auto"}
-            from_lang = lang_map.get(sl, "auto")
-            to_lang = lang_map.get(tl, "es")
-
-            # Traducción directa usando motores como Google, Bing, etc.
-            result = ts.translate_text(
-                text, 
-                from_language=from_lang, 
-                to_language=to_lang, 
-                engine=config.FAST_ENGINE
-            )
-            return result
-        except Exception as e:
-            print(f"[FastMode] Error: {e}", flush=True)
-            # Fallback a modo AI si falla el rápido
-            return self._translate_ai(text, source_lang, target_lang)
-
-    def _translate_ai(self, text, source_lang=None, target_lang=None):
-        self._update_headers()
-        
-        if not config.API_KEY:
-            return "Error: No API Key"
+        if not self.model or not self.tokenizer:
+            return "El modelo de traducción local todavía se está cargando. Esperá unos segundos y volvé a intentarlo."
 
         sl = source_lang or config.SOURCE_LANG
         tl = target_lang or config.TARGET_LANG
         
-        # System prompt ultra-optimizado para traducción pura y dura
-        system_content = (
-            f"You are a professional literal translator. Your goal is to translate text from {sl} to {tl} "
-            "maintaining the exact tone and style. DO NOT add explanations, notes, or quotes. "
-            "If the text is already in the target language, return it as is."
-        )
-
-        messages = [{"role": "system", "content": system_content}]
-
-        if config.CONTEXT_MODE and self.history:
-            messages.extend(self.history)
-
-        messages.append({"role": "user", "content": text})
-
-        payload = {
-            "model": config.MODEL,
-            "messages": messages,
-            "temperature": 0.3,
-            "max_tokens": 2000
-        }
-
+        # Obtener los códigos _Latn/_Cyrl reales desde el diccionario
+        src_code = NLLB_LANGUAGES.get(sl, "eng_Latn")
+        tgt_code = NLLB_LANGUAGES.get(tl, "spa_Latn")
+        
         try:
-            response = self.session.post(self.url, json=payload, timeout=10)
+            import re
             
-            if response.status_code != 200:
-                try:
-                    error_msg = response.json().get('error', {}).get('message', '')
-                except:
-                    error_msg = response.text[:100]
-                return f"Error API {response.status_code}: {error_msg}"
-                
-            data = response.json()
-            translation = data['choices'][0]['message']['content'].strip()
+            if config.SPLIT_SENTENCES:
+                # Divide por oraciones o saltos de línea manteniendo los separadores
+                chunks = re.split(r'([.!?]+\s+|\n+)', text)
+            else:
+                # Separar SOLO por saltos de línea para mantener el contexto
+                chunks = re.split(r'(\n+)', text)
             
-            if config.CONTEXT_MODE:
-                self.history.append({"role": "user", "content": text})
-                self.history.append({"role": "assistant", "content": translation})
-                self._save_history()
+            sources = []
+            chunk_indices = []
+            added_periods = []
+            
+            self.tokenizer.src_lang = src_code
+            
+            # Preparar el batch de párrafos
+            for i, chunk in enumerate(chunks):
+                if chunk and not chunk.isspace():
+                    # Evitar alucinaciones en oraciones sin terminar
+                    added_period = False
+                    if not chunk.endswith((".", "!", "?", ":", ";", '"', "'")):
+                        chunk += "."
+                        added_period = True
+                        
+                    source = self.tokenizer.convert_ids_to_tokens(self.tokenizer.encode(chunk))
+                    sources.append(source)
+                    chunk_indices.append(i)
+                    added_periods.append(added_period)
+            
+            if sources:
+                target_prefixes = [[tgt_code]] * len(sources)
+                # Aplicamos los parámetros maestros para evitar que NLLB omita texto:
+                # - coverage_penalty: Castiga matemáticamente al modelo si ignora palabras del origen.
+                # - max_decoding_length: Aumenta el límite de tokens para que no se corte por límite de memoria.
+                results = self.model.translate_batch(
+                    sources, 
+                    target_prefix=target_prefixes, 
+                    beam_size=config.BEAM_SIZE,
+                    coverage_penalty=2.0,
+                    length_penalty=1.5,
+                    repetition_penalty=1.2,
+                    max_decoding_length=1024
+                )
                 
-            return translation
-        except json.JSONDecodeError:
-            return "Error: Respuesta inválida (posible caída del servidor)"
+                # Volcar traducciones en sus lugares originales
+                for idx_in_batch, original_idx in enumerate(chunk_indices):
+                    target = results[idx_in_batch].hypotheses[0][1:]
+                    translation = self.tokenizer.decode(self.tokenizer.convert_tokens_to_ids(target))
+                    
+                    if added_periods[idx_in_batch] and translation.endswith("."):
+                        translation = translation[:-1]
+                        
+                    chunks[original_idx] = translation
+                    
+            return "".join(chunks)
         except Exception as e:
-            return f"Error de conexión: {e}"
-
-    def clear_history(self):
-        self.history = []
-        self._save_history()
-        print("[Translator] Historial vaciado.", flush=True)
+            return f"Error interno del modelo local: {e}"
 
 translator = Translator()

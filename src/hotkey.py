@@ -9,8 +9,10 @@ from ctypes import wintypes
 MOD_CONTROL = 0x0002
 MOD_SHIFT = 0x0004
 HOTKEY_ID_SETTINGS = 1
-HOTKEY_ID_CLEAR = 2
 HOTKEY_ID_EXIT = 3
+HOTKEY_ID_SWAP = 4
+HOTKEY_ID_PAUSE = 5
+HOTKEY_ID_HELP = 6
 
 class HotkeyMonitor(threading.Thread):
     def __init__(self, callbacks):
@@ -23,10 +25,14 @@ class HotkeyMonitor(threading.Thread):
         # We need a message loop to receive hotkey events
         # Register Ctrl+Shift+C (0x43 is 'C')
         ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_SETTINGS, MOD_CONTROL | MOD_SHIFT, 0x43)
-        # Register Ctrl+Shift+Delete (0x2E is VK_DELETE)
-        ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_CLEAR, MOD_CONTROL | MOD_SHIFT, 0x2E)
         # Register Ctrl+Shift+F4 (0x73 is VK_F4)
         ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_EXIT, MOD_CONTROL | MOD_SHIFT, 0x73)
+        # Register Ctrl+Shift+S (0x53 is 'S')
+        ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_SWAP, MOD_CONTROL | MOD_SHIFT, 0x53)
+        # Register Ctrl+Shift+P (0x50 is 'P') for pause/resume
+        ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_PAUSE, MOD_CONTROL | MOD_SHIFT, 0x50)
+        # Register Ctrl+Shift+F1 (0x70 is VK_F1) for help
+        ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_HELP, MOD_CONTROL | MOD_SHIFT, 0x70)
 
         print("[Hotkey] Teclas registradas correctamente.", flush=True)
         
@@ -45,8 +51,10 @@ class HotkeyMonitor(threading.Thread):
                 ctypes.windll.user32.DispatchMessageW(ctypes.byref(msg))
         finally:
             ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_SETTINGS)
-            ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_CLEAR)
             ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_EXIT)
+            ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_SWAP)
+            ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_PAUSE)
+            ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID_HELP)
 
     def stop(self):
         self.running = False

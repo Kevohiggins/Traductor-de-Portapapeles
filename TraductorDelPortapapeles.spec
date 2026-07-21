@@ -5,6 +5,7 @@ block_cipher = None
 added_files = [
     ('src', 'src'),
     ('src/nvdaControllerClient64.dll', 'src'),
+    ('models/nllb-ct2', 'models/nllb-ct2'),
 ]
 
 a = Analysis(
@@ -12,11 +13,11 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=added_files,
-    hiddenimports=['wx', 'pystray', 'PIL', 'dotenv', 'httpx', 'httpcore', 'win32com.client', 'pythoncom'],
+    hiddenimports=['wx', 'wx.adv', 'dotenv', 'win32com.client', 'pythoncom', 'ctranslate2', 'transformers', 'pyttsx3', 'transformers.models.nllb', 'transformers.models.nllb.tokenization_nllb_fast'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['httpx', 'httpcore', 'torch', 'torchvision', 'torchaudio', 'optimum', 'openvino'],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

@@ -1,200 +1,145 @@
 import wx
-import os
-import json
 import traceback
-import sys
 from .config import config
-from .translator import translator
+from .languages import NLLB_LANGUAGES
 
 class SettingsWindow(wx.Dialog):
     def __init__(self, parent):
-        super().__init__(parent, title="Ajustes del Traductor", size=(450, 550), 
+        super().__init__(parent, title="Ajustes del Traductor (V2 Local)", size=(450, 420), 
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
-        
-        # Definir motores tradicionales disponibles
-        self.traditional_engines = [
-            "google", "bing", "baidu", "alibaba", "tencent", "alibaba", "itranslate", 
-            "papago", "reverso", "sogou", "youdao", "modernMt", "deepl", "yandex"
-        ]
         
         self.InitUI()
         self.Centre()
 
     def InitUI(self):
         panel = wx.Panel(self)
-        panel.SetBackgroundColour(wx.Colour(245, 247, 250)) # Soft modern background
+        panel.SetBackgroundColour(wx.Colour(245, 247, 250))
         vbox = wx.BoxSizer(wx.VERTICAL)
 
-        # Set modern font
         font = wx.Font(10, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, "Segoe UI")
         bold_font = wx.Font(10, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, "Segoe UI")
         title_font = wx.Font(14, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD, False, "Segoe UI")
 
-        title = wx.StaticText(panel, label="Universal Translator Settings")
+        title = wx.StaticText(panel, label="Configuración de Idiomas")
         title.SetFont(title_font)
         title.SetForegroundColour(wx.Colour(30, 40, 60))
         vbox.Add(title, flag=wx.ALIGN_CENTER|wx.TOP|wx.BOTTOM, border=15)
 
-        # --- Clave API ---
-        lbl_key = wx.StaticText(panel, label="Clave API de OpenRouter:")
-        vbox.Add(lbl_key, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=10)
-        self.txt_key = wx.TextCtrl(panel, style=wx.TE_PASSWORD)
-        self.txt_key.SetValue(config.API_KEY or "")
-        vbox.Add(self.txt_key, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
-
-        # --- Idiomas ---
-        self.langs_display = [
-            "Detección automática", "Afrikáans", "Albanés", "Alemán", "Amhárico", "Árabe", "Armenio", "Azerbaiyano",
-            "Bengalí", "Bielorruso", "Birmano", "Bosnio", "Búlgaro", "Catalán", "Cebuano", "Checo", "Chichewa",
-            "Chino (Simplificado)", "Chino (Tradicional)", "Coreano", "Corso", "Criollo haitiano", "Croata",
-            "Danés", "Eslovaco", "Esloveno", "Español", "Esperanto", "Estonio", "Euskera", "Finlandés", "Francés",
-            "Frisón", "Gaelico escocés", "Galés", "Gallego", "Georgiano", "Griego", "Gujarati", "Hausa", "Hawaiano",
-            "Hebreo", "Hindi", "Hmong", "Húngaro", "Igbo", "Indonesio", "Inglés", "Irlandés", "Islandés", "Italiano",
-            "Japonés", "Javanés", "Kannada", "Kazajo", "Jemer", "Kirguís", "Kurdo", "Lao", "Latín", "Letón", "Lituano",
-            "Luxemburgués", "Macedonio", "Malayalam", "Malayo", "Malgache", "Maltés", "Maorí", "Maratí", "Mongol",
-            "Neerlandés", "Nepalí", "Noruego", "Orija", "Pastún", "Persa", "Polaco", "Portugués", "Punjabi", "Rumano",
-            "Ruso", "Samoano", "Serbio", "Sesoto", "Shona", "Sindhi", "Sinhalés", "Somalí", "Sundanés", "Suajili",
-            "Sueco", "Tagalo", "Tailandés", "Tamil", "Tártaro", "Tayiko", "Telugu", "Tibetano", "Turco", "Turcomano",
-            "Ucraniano", "Urdu", "Uigur", "Uzbeko", "Vietnamita", "Xhosa", "Yidis", "Yoruba", "Zulú"
-        ]
-        self.langs_map = {lang: lang if lang != "Detección automática" else "auto" for lang in self.langs_display}
-        self.reverse_map = {v: k for k, v in self.langs_map.items()}
+        # Listas de idiomas
+        self.source_choices = list(NLLB_LANGUAGES.keys())
+        self.target_choices = list(NLLB_LANGUAGES.keys())
 
         # Origen
         lbl_src = wx.StaticText(panel, label="Idioma de origen:")
-        vbox.Add(lbl_src, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=10)
-        self.cb_source = wx.ComboBox(panel, choices=self.langs_display, style=wx.CB_READONLY)
-        self.cb_source.SetValue(self.reverse_map.get(config.SOURCE_LANG, "Detección automática"))
-        vbox.Add(self.cb_source, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
+        lbl_src.SetFont(bold_font)
+        vbox.Add(lbl_src, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=15)
+        self.cb_source = wx.ComboBox(panel, choices=self.source_choices, style=wx.CB_READONLY)
+        self.cb_source.SetFont(font)
+        self.cb_source.SetValue(self._get_source_display_name(config.SOURCE_LANG))
+        vbox.Add(self.cb_source, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
+
+        # Botón Intercambiar
+        self.btn_swap = wx.Button(panel, label="↑↓ Intercambiar Idiomas")
+        self.btn_swap.SetFont(font)
+        self.btn_swap.Bind(wx.EVT_BUTTON, self.OnSwapLanguages)
+        vbox.Add(self.btn_swap, flag=wx.ALIGN_CENTER|wx.BOTTOM, border=10)
 
         # Destino
         lbl_tgt = wx.StaticText(panel, label="Idioma de destino:")
+        lbl_tgt.SetFont(bold_font)
         vbox.Add(lbl_tgt, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=10)
-        self.cb_target = wx.ComboBox(panel, choices=self.langs_display[1:], style=wx.CB_READONLY)
-        self.cb_target.SetValue(self.reverse_map.get(config.TARGET_LANG, "Español"))
-        vbox.Add(self.cb_target, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
+        self.cb_target = wx.ComboBox(panel, choices=self.target_choices, style=wx.CB_READONLY)
+        self.cb_target.SetFont(font)
+        self.cb_target.SetValue(self._get_target_display_name(config.TARGET_LANG))
+        vbox.Add(self.cb_target, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
 
-        # --- Modo de Traducción ---
-        lbl_mode = wx.StaticText(panel, label="Modo de traducción:")
-        vbox.Add(lbl_mode, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=10)
-        self.cb_mode = wx.ComboBox(panel, choices=["Modo IA", "Modo Tradicional"], style=wx.CB_READONLY)
-        self.cb_mode.SetValue("Modo IA" if config.TRANSLATION_MODE == "AI" else "Modo Tradicional")
-        self.cb_mode.Bind(wx.EVT_COMBOBOX, self.OnModeChange)
-        vbox.Add(self.cb_mode, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
+        self.chk_clipboard = wx.CheckBox(panel, label="Copiar traducción al portapapeles")
+        self.chk_clipboard.SetFont(font)
+        self.chk_clipboard.SetValue(config.COPY_TO_CLIPBOARD)
+        vbox.Add(self.chk_clipboard, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
 
-        # --- Motor / Modelo Dinámico ---
-        self.lbl_engine = wx.StaticText(panel, label="Modelo de IA:")
-        vbox.Add(self.lbl_engine, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=10)
-        self.cb_engine = wx.ComboBox(panel, style=wx.CB_READONLY)
-        vbox.Add(self.cb_engine, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
+        # Checkbox Cortador de Oraciones
+        self.chk_split = wx.CheckBox(panel, label="Forzar división por oraciones (Previene omitir texto, pero reduce coherencia de contexto)")
+        self.chk_split.SetFont(font)
+        self.chk_split.SetValue(config.SPLIT_SENTENCES)
+        vbox.Add(self.chk_split, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
+
+        # Calidad vs Velocidad (Beam Size)
+        lbl_beam = wx.StaticText(panel, label="Calidad de Traducción:")
+        lbl_beam.SetFont(bold_font)
+        vbox.Add(lbl_beam, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=5)
         
-        # Cargar opciones iniciales del motor
-        self.UpdateEngineOptions()
+        self.beam_choices = ["Baja (Más rápida)", "Normal (Equilibrada)", "Alta (Mejor calidad)"]
+        self.cb_beam = wx.ComboBox(panel, choices=self.beam_choices, style=wx.CB_READONLY)
+        self.cb_beam.SetFont(font)
+        
+        # Mapear el tamaño actual al texto
+        beam_val = config.BEAM_SIZE
+        if beam_val == 1: self.cb_beam.SetSelection(0)
+        elif beam_val == 4: self.cb_beam.SetSelection(2)
+        else: self.cb_beam.SetSelection(1) # Default 2
+        
+        vbox.Add(self.cb_beam, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
 
-        # --- Modo Contextual ---
-        self.chk_context = wx.CheckBox(panel, label="Activar modo contextual (historial)")
-        self.chk_context.SetFont(font)
-        self.chk_context.SetValue(getattr(config, 'CONTEXT_MODE', False))
-        vbox.Add(self.chk_context, flag=wx.ALL, border=10)
-
-        self.btn_clear = wx.Button(panel, label="Vaciar historial actual")
-        self.btn_clear.SetFont(font)
-        self.btn_clear.Bind(wx.EVT_BUTTON, self.OnClearHistory)
-        vbox.Add(self.btn_clear, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
-
-        # --- Botón Guardar ---
+        # Botón Guardar
         self.btn_save = wx.Button(panel, label="Guardar cambios", size=(-1, 40))
         self.btn_save.SetFont(bold_font)
-        self.btn_save.SetBackgroundColour(wx.Colour(0, 120, 215)) # Windows blue
+        self.btn_save.SetBackgroundColour(wx.Colour(0, 120, 215)) # Azul
         self.btn_save.SetForegroundColour(wx.WHITE)
         self.btn_save.SetDefault()
         self.btn_save.Bind(wx.EVT_BUTTON, self.OnSave)
         vbox.Add(self.btn_save, flag=wx.EXPAND|wx.ALL, border=20)
 
-        # Apply basic font to all children
-        for child in panel.GetChildren():
-            if isinstance(child, wx.StaticText) and child != title:
-                child.SetFont(bold_font)
-                child.SetForegroundColour(wx.Colour(50, 60, 75))
-            elif isinstance(child, (wx.TextCtrl, wx.ComboBox)):
-                child.SetFont(font)
-
         panel.SetSizer(vbox)
         vbox.Fit(self)
 
-    def UpdateEngineOptions(self):
-        mode = self.cb_mode.GetValue()
-        if mode == "Modo IA":
-            self.lbl_engine.SetLabel("Modelo de IA:")
-            models = list(config.AVAILABLE_MODELS.keys())
-            self.cb_engine.SetItems(models)
-            
-            # Buscar el nombre del modelo actual
-            current_model_name = models[0]
-            for name, mid in config.AVAILABLE_MODELS.items():
-                if mid == config.MODEL:
-                    current_model_name = name
-                    break
-            self.cb_engine.SetValue(current_model_name)
-        else:
-            self.lbl_engine.SetLabel("Servidor de traducción:")
-            self.cb_engine.SetItems(self.traditional_engines)
-            if config.FAST_ENGINE in self.traditional_engines:
-                self.cb_engine.SetValue(config.FAST_ENGINE)
-            else:
-                self.cb_engine.SetValue("google")
+    def _get_source_display_name(self, internal_name):
+        if not internal_name: return self.source_choices[0]
+        # Buscar el nombre por defecto guardado en config
+        for name in self.source_choices:
+            if name == internal_name:
+                return name
+        return self.source_choices[0]
+        
+    def _get_target_display_name(self, internal_name):
+        if not internal_name: return "Español"
+        for name in self.target_choices:
+            if name == internal_name:
+                return name
+        return "Español"
 
-    def OnModeChange(self, event):
-        self.UpdateEngineOptions()
-
-    def OnClearHistory(self, event):
-        translator.clear_history()
-        wx.MessageBox("Historial de conversación vaciado.", "Información", wx.OK | wx.ICON_INFORMATION)
+    def OnSwapLanguages(self, event):
+        src = self.cb_source.GetValue()
+        tgt = self.cb_target.GetValue()
+        self.cb_source.SetValue(tgt)
+        self.cb_target.SetValue(src)
 
     def OnSave(self, event):
         try:
-            api_key = self.txt_key.GetValue().strip()
-            source = self.langs_map.get(self.cb_source.GetValue(), "auto")
-            target = self.langs_map.get(self.cb_target.GetValue(), "Spanish")
-            context_mode = self.chk_context.GetValue()
+            source = self.cb_source.GetValue()
+            target = self.cb_target.GetValue()
+            copy_cb = self.chk_clipboard.GetValue()
+            split_cb = self.chk_split.GetValue()
             
-            mode_val = self.cb_mode.GetValue()
-            translation_mode = "AI" if mode_val == "Modo IA" else "Fast"
+            # Obtener el tamaño del beam
+            beam_sel = self.cb_beam.GetSelection()
+            beam_size = 2
+            if beam_sel == 0: beam_size = 1
+            elif beam_sel == 2: beam_size = 4
             
-            model_id = config.MODEL
-            fast_engine = config.FAST_ENGINE
-            
-            if translation_mode == "AI":
-                model_id = config.AVAILABLE_MODELS.get(self.cb_engine.GetValue(), config.MODEL)
-            else:
-                fast_engine = self.cb_engine.GetValue()
-            
-            # Guardar físicamente
-            if config.save(source, target, model_id, api_key, context_mode, translation_mode, fast_engine):
+            if config.save(source_lang=source, target_lang=target, copy_to_clipboard=copy_cb, beam_size=beam_size, split_sentences=split_cb):
                 self.EndModal(wx.ID_OK)
             else:
-                wx.MessageBox("Error al guardar.", "Error", wx.OK | wx.ICON_ERROR)
+                wx.MessageBox("Error al guardar la configuración.", "Error", wx.OK | wx.ICON_ERROR)
         except Exception as e:
             traceback.print_exc()
             wx.MessageBox(f"Error: {e}", "Error", wx.OK | wx.ICON_ERROR)
 
 def show_first_run_dialog():
-    app = wx.GetApp() or wx.App(False)
-    dlg = wx.TextEntryDialog(None, "No se ha encontrado una clave API de OpenRouter.\nPor favor, introdúcela para comenzar:", 
-                              "Configuración Inicial", 
-                              style=wx.OK | wx.CANCEL | wx.CENTRE | wx.TE_PASSWORD)
-    res = False
-    if dlg.ShowModal() == wx.ID_OK:
-        key = dlg.GetValue().strip()
-        if key:
-            config.save(api_key=key)
-            res = True
-    dlg.Destroy()
-    return res
+    return True
 
 def show_settings():
     app = wx.GetApp() or wx.App(False)
-    # Usar el diálogo de forma modal para que capture el foco y sea accesible
     dlg = SettingsWindow(None)
     dlg.ShowModal()
     dlg.Destroy()
