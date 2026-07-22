@@ -1,4 +1,4 @@
-# Traductor Gemma 3
+# Traductor de Portapapeles
 
 Esto es una herramienta que traduce automáticamente cualquier texto copiado de manera offline y gratuita, protegiendo tu privacidad.
 
