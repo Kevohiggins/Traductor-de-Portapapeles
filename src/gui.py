@@ -5,7 +5,7 @@ from .languages import NLLB_LANGUAGES
 
 class SettingsWindow(wx.Dialog):
     def __init__(self, parent):
-        super().__init__(parent, title="Ajustes del Traductor (V2 Local)", size=(450, 420), 
+        super().__init__(parent, title="Ajustes del Traductor (V3 Gemma)", size=(450, 450), 
                          style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         
         self.InitUI()
@@ -58,28 +58,11 @@ class SettingsWindow(wx.Dialog):
         self.chk_clipboard.SetValue(config.COPY_TO_CLIPBOARD)
         vbox.Add(self.chk_clipboard, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
 
-        # Checkbox Cortador de Oraciones
-        self.chk_split = wx.CheckBox(panel, label="Forzar división por oraciones (Previene omitir texto, pero reduce coherencia de contexto)")
-        self.chk_split.SetFont(font)
-        self.chk_split.SetValue(config.SPLIT_SENTENCES)
-        vbox.Add(self.chk_split, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
-
-        # Calidad vs Velocidad (Beam Size)
-        lbl_beam = wx.StaticText(panel, label="Calidad de Traducción:")
-        lbl_beam.SetFont(bold_font)
-        vbox.Add(lbl_beam, flag=wx.LEFT|wx.RIGHT|wx.TOP, border=5)
-        
-        self.beam_choices = ["Baja (Más rápida)", "Normal (Equilibrada)", "Alta (Mejor calidad)"]
-        self.cb_beam = wx.ComboBox(panel, choices=self.beam_choices, style=wx.CB_READONLY)
-        self.cb_beam.SetFont(font)
-        
-        # Mapear el tamaño actual al texto
-        beam_val = config.BEAM_SIZE
-        if beam_val == 1: self.cb_beam.SetSelection(0)
-        elif beam_val == 4: self.cb_beam.SetSelection(2)
-        else: self.cb_beam.SetSelection(1) # Default 2
-        
-        vbox.Add(self.cb_beam, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
+        # Checkbox Contexto Histórico
+        self.chk_context = wx.CheckBox(panel, label="Usar Contexto Histórico (Recuerda las últimas 10 traducciones)")
+        self.chk_context.SetFont(font)
+        self.chk_context.SetValue(config.USE_CONTEXT)
+        vbox.Add(self.chk_context, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM, border=15)
 
         # Botón Guardar
         self.btn_save = wx.Button(panel, label="Guardar cambios", size=(-1, 40))
@@ -119,19 +102,14 @@ class SettingsWindow(wx.Dialog):
             source = self.cb_source.GetValue()
             target = self.cb_target.GetValue()
             copy_cb = self.chk_clipboard.GetValue()
-            split_cb = self.chk_split.GetValue()
+            context_cb = self.chk_context.GetValue()
             
-            # Obtener el tamaño del beam
-            beam_sel = self.cb_beam.GetSelection()
-            beam_size = 2
-            if beam_sel == 0: beam_size = 1
-            elif beam_sel == 2: beam_size = 4
-            
-            if config.save(source_lang=source, target_lang=target, copy_to_clipboard=copy_cb, beam_size=beam_size, split_sentences=split_cb):
+            if config.save(source_lang=source, target_lang=target, copy_to_clipboard=copy_cb, use_context=context_cb):
                 self.EndModal(wx.ID_OK)
             else:
                 wx.MessageBox("Error al guardar la configuración.", "Error", wx.OK | wx.ICON_ERROR)
         except Exception as e:
+            import traceback
             traceback.print_exc()
             wx.MessageBox(f"Error: {e}", "Error", wx.OK | wx.ICON_ERROR)
 
@@ -141,5 +119,8 @@ def show_first_run_dialog():
 def show_settings():
     app = wx.GetApp() or wx.App(False)
     dlg = SettingsWindow(None)
+    # Forzar la ventana al frente (a veces Windows la oculta por no tener ventana principal)
+    dlg.SetWindowStyle(dlg.GetWindowStyle() | wx.STAY_ON_TOP)
+    dlg.Raise()
     dlg.ShowModal()
     dlg.Destroy()

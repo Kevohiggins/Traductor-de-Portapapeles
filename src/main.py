@@ -47,7 +47,7 @@ def process_text(text, source):
         elapsed = time.time() - start_time
         
         if translation and not translation.startswith("Error:"):
-            print(f"[{source}] Traducción lista en {elapsed:.2f}s (Beam Size: {config.BEAM_SIZE})", flush=True)
+            print(f"[{source}] Traducción lista en {elapsed:.2f}s", flush=True)
             print(f"[{source}] Resultado: {translation}", flush=True)
             
             # Copiar traducción al portapapeles sin crear bucle infinito

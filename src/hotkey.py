@@ -29,8 +29,8 @@ class HotkeyMonitor(threading.Thread):
         ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_EXIT, MOD_CONTROL | MOD_SHIFT, 0x73)
         # Register Ctrl+Shift+S (0x53 is 'S')
         ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_SWAP, MOD_CONTROL | MOD_SHIFT, 0x53)
-        # Register Ctrl+Shift+P (0x50 is 'P') for pause/resume
-        ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_PAUSE, MOD_CONTROL | MOD_SHIFT, 0x50)
+        # Register Ctrl+Shift+A (0x41 is 'A') for pause/resume
+        ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_PAUSE, MOD_CONTROL | MOD_SHIFT, 0x41)
         # Register Ctrl+Shift+F1 (0x70 is VK_F1) for help
         ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID_HELP, MOD_CONTROL | MOD_SHIFT, 0x70)
 

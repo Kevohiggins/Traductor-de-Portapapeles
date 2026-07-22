@@ -60,21 +60,21 @@
 </head>
 <body>
     <div class="container">
-        <h1>Manual del Traductor de Portapapeles (V2)</h1>
+        <h1>Manual del Traductor de Portapapeles (V3)</h1>
 
         <div class="info-box">
-            <strong>¿Qué es esto?</strong> Una herramienta que vigila tu portapapeles y traduce automáticamente cualquier texto que copies, leyéndotelo en voz alta. Todo esto ocurre de manera local, usando el poderosísimo modelo NLLB de Meta.
+            <strong>¿Qué es esto?</strong> Una herramienta que vigila tu portapapeles y traduce automáticamente cualquier texto que copies, leyéndotelo en voz alta. Todo esto ocurre de manera local, usando el modelo Gemma 3 de Google.
         </div>
 
         <h2>¿Cómo usarlo?</h2>
         <p>Cuando ejecutes el programa, si todo sale bien, vas a escuchar "Traductor activado", y a tener un icono en la bandeja del sistema. A partir de ahí, copiá algo, y disfrutá ah.</p>
-<p><strong>Nota importante</strong>: es normal que, la primera vez que ejecutes el programa, el modelo tarde horrores en cargarse. ANdá probando periódicamente hasta que funcione.</p>
+<p><strong>Nota importante</strong>: es normal que, la primera vez que ejecutes el programa, el modelo tarde horrores en cargarse en la memoria. Andá probando periódicamente hasta que funcione.</p>
 
         <h2>Atajos de Teclado Globales</h2>
-        <p>Estos atajos funcionan en cualquier ventana, estés donde estés:</p>
+        <p>Estos atajos funcionan en cualquier ventana:</p>
         <ul>
             <li><code>Control + Shift + S</code>: <strong>Intercambiar Idiomas.</strong> Cambia instantáneamente el idioma de origen por el de destino y viceversa. La voz te confirmará el nuevo idioma de destino.</li>
-            <li><code>Control + Shift + P</code>: <strong>Pausar / Reanudar.</strong> Pausa la vigilancia del portapapeles para que puedas copiar texto libremente sin que el traductor lo capture.</li>
+            <li><code>Control + Shift + A</code>: <strong>Pausar / Reanudar.</strong> Pausa la vigilancia del portapapeles para que puedas copiar texto libremente sin que el traductor lo capture.</li>
             <li><code>Control + Shift + C</code>: <strong>Configuración.</strong> Abre el panel de ajustes para cambiar idiomas y opciones.</li>
             <li><code>Control + Shift + F1</code>: <strong>Ayuda.</strong> Abre este manual de instrucciones.</li>
             <li><code>Control + Shift + F4</code>: <strong>Cerrar Programa.</strong> Apaga el traductor por completo de manera segura.</li>
@@ -84,30 +84,17 @@
         <p>Si abrís los ajustes (<code>Control + Shift + C</code>), vas a encontrar:</p>
         
         <h3>Modificación de Idiomas</h3>
-        <p>El sistema soporta más de 60 idiomas distintos. Por defecto, el Origen es <strong>Inglés</strong> y el Destino es <strong>Español</strong>.</p>
-        <div class="warning-box">
-            <strong>Nota Técnica:</strong> El modelo NLLB requiere que seas preciso con el idioma de origen. Si estás copiando un texto en Español, cambialo a Español. Si no lo hacés, preparate para escuchar cosas raras.
-        </div>
-
-        <h3>Calidad de Traducción (Beam Search)</h3>
-        <p>El programa te permite elegir cuántos caminos de traducción calculará la IA simultáneamente antes de darte el mejor resultado:</p>
-        <ul>
-            <li><strong>Baja (Más rápida):</strong> Utiliza <code>Beam Size 1</code>. Ideal para traducciones inmediatas o PC's más lentas. Funciona perfecto con frases comunes.</li>
-            <li><strong>Normal (Equilibrada):</strong> El punto medio recomendado.</li>
-            <li><strong>Alta (Mejor calidad):</strong> Utiliza <code>Beam Size 4</code>. Es la capacidad máxima de la IA. Ideal para traducir textos muy complejos, formales o idiomas asiáticos donde la gramática es un enredo.</li>
-        </ul>
+        <p>El sistema soporta varios idiomas. Por defecto, el Origen es <strong>Inglés</strong> y el Destino es <strong>Español</strong>.</p>
 
         <h3>Copiar al portapapeles</h3>
         <p>Si activás la opción <strong>"Copiar traducción al portapapeles"</strong>, el programa reemplazará automáticamente el texto original que copiaste por su versión traducida, cosa que puedas pegarla.</p>
 
-        <h3>Forzar división por oraciones</h3>
-        <p>Por defecto, la IA traduce párrafos enteros de golpe para mantener el contexto (útil para que recuerde géneros y pronombres). Sin embargo, si copiás un texto muy largo o con muchos errores ortográficos, la IA puede saturarse y "omitir" o borrar algunas frases.</p>
-        <p>Al activar <strong>"Forzar división por oraciones"</strong>, el programa cortará el texto por cada punto (<code>.</code>), signo de interrogación (<code>?</code>) o exclamación (<code>!</code>) y le dará a la IA una oración a la vez. <br>
-        <strong>Ventaja:</strong> Garantiza que la IA traduzca el 100% del texto sin saltearse nada. <br>
-        <strong>Desventaja:</strong> La IA perderá el contexto global (por ejemplo, puede traducir "él" en lugar de "ella" si el nombre de la persona quedó en la oración anterior).</p>
 
-        <h2>Arquitectura V2 (Offline)</h2>
-        <p>Esta segunda versión fue rediseñada para ser extremadamente liviana. Todo el pesado motor de PyTorch fue descartado y reemplazado por <code>CTranslate2</code> nativo, corriendo en precisión <code>INT8</code>. El texto se procesa mediante una técnica de <strong>Inferencia de Párrafo Zero-Shot</strong> (con penalizaciones extremas: <code>coverage=2.0</code>, <code>length=1.5</code>, <code>repetition=1.2</code>), lo que fuerza al modelo a traducir párrafos enteros sin omitir texto, y sin destruir pronombres, géneros ni contexto.</p>
+
+        <h3>Memoria de Contexto Histórico (Nuevo en V3)</h3>
+        <p>Al activar <strong>"Usar Contexto Histórico"</strong>, Gemma recuerda las últimas 10 traducciones que hiciste. <br>
+        <p>Sirve mucho para videojuegos, novelas visuales o lo que fuere. Si un personaje habla y luego le responde otro, la IA sabrá exactamente de qué estaban hablando antes.</p>
+        <strong>Nota:</strong> Si dejás de jugar, apagá esta opción y guardá los cambios para borrar la memoria.</p>
 
         <h2>Créditos</h2>
         <p>Quiero dejar claro que yo no escribí una sola línea de código. Todo esto es obra de <a href="https://gemini.google.com" target="_blank">Gemini, la inteligencia artificial de Google (se abre en una nueva pestaña)</a>.</p>
@@ -121,7 +108,7 @@
         <p>Si querés reportar errores, si tenés sugerencias, o si formás parte de la población femenina, podés utilizar <a href="https://kevohiggins.github.io/contactame">este apartado para contactarme</a>.</p>
         
         <footer>
-            <p>Traductor de Portapapeles V2 - 2026 | Potenciado por Meta NLLB y CTranslate2.</p>
+            <p>Traductor de Portapapeles V3 - 2026 | Potenciado por Google Gemma 3 y CTranslate2.</p>
             <p>Donaciones: <a href="https://www.paypal.com/paypalme/KevOHiggins" target="_blank">PayPal</a> | <a href="https://link.mercadopago.com.ar/kevohiggins" target="_blank">Mercado Pago</a></p>
         </footer>
     </div>

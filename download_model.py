@@ -5,18 +5,17 @@ try:
     import ctranslate2
 except ImportError:
     print("Error: Necesitas instalar ctranslate2 y torch para convertir el modelo.")
-    print("Ejecuta: pip install ctranslate2 torch transformers")
+    print("Ejecuta: pip install -r requirements.txt")
     sys.exit(1)
 
 def download_and_convert():
-    model_id = "facebook/nllb-200-distilled-600M"
-    local_dir = os.path.join(os.path.dirname(__file__), "models", "nllb-ct2")
+    model_id = "google/gemma-3-1b-it" 
+    local_dir = os.path.join(os.path.dirname(__file__), "models", "gemma-2b-ct2")
 
     print(f"Descargando {model_id} oficial y convirtiéndolo a CTranslate2 INT8...")
     print("Esto puede tomar varios minutos y consumir bastante RAM. ¡Paciencia!")
     
     try:
-        # El TransformersConverter descarga automáticamente el modelo desde HuggingFace y lo convierte
         converter = ctranslate2.converters.TransformersConverter(
             model_name_or_path=model_id,
             copy_files=["tokenizer.json", "tokenizer_config.json", "special_tokens_map.json"]
